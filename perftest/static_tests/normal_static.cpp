@@ -21,7 +21,7 @@
 using namespace dense::stochastic;
 
 int main() {
-  int THREADS = 4;
+  int THREADS = THREAD_NUM;
   int TOTAL_ITERATIONS = 1000000;
   std::normal_distribution<float> d(5,2); 
   std::default_random_engine generator;
