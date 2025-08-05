@@ -2,9 +2,9 @@
 //Enter the library you want to test after 'DWRSLIB=' and the number of weights after 'DWEIGHTNUM='.
 
 //Ex:
-//g++ -I../lib -O3 "-DWRSLIB=nonuniform_int_distribution<int>" "-DWEIGHTNUM=10000000" -o test0 normal_static.cpp
-//g++ -I../lib -O3 "-DWRSLIB=heap_random_selector<int>" "-DWEIGHTNUM=100000" -o test1 normal_static.cpp
-//g++ -I../lib -O3 "-DWRSLIB=std::discrete_distribution<int>" "-DWEIGHTNUM=100" -o test2 normal_static.cpp
+//g++ -I../lib -O3 "-DWRSLIB=nonuniform_int_distribution<int>" "-DWEIGHTNUM=10000000" -o test0 uniform_static.cpp
+//g++ -I../lib -O3 "-DWRSLIB=heap_random_selector<int>" "-DWEIGHTNUM=100000" -o test1 uniform_static.cpp
+//g++ -I../lib -O3 "-DWRSLIB=std::discrete_distribution<int>" "-DWEIGHTNUM=100" -o test2 uniform_static.cpp
 
 #include "random_selector.hpp"
 #include "modifiable_heap_random_selector.hpp"
@@ -17,16 +17,13 @@
 #include <random>
 #include <vector>
 #include <algorithm>
-#include <thread>
 using namespace dense::stochastic;
 
 int main() {
-  int THREADS = 4;
-  int TOTAL_ITERATIONS = 1000000;
-  std::normal_distribution<float> d(5,2); 
+  std::uniform_real_distribution<float> d(1,10); 
   std::default_random_engine generator;
   std::vector<float> weights = {};
-  int sum = 0;
+  int sum = 1;
   
   for(int i = 0; i < WEIGHTNUM; i++){
     weights.push_back(d(generator));
@@ -35,31 +32,17 @@ int main() {
   float minweight = *std::min_element(weights.begin(), weights.end());
   for(int i = 0; i < WEIGHTNUM; i++){
     weights[i] -= minweight;
-  }
-    //start time
+  }	      
+
+  //start time
   struct timeval start, end;
+  WRSLIB selector(weights.begin(), weights.end()); 
   gettimeofday(&start, NULL);
 
-  std::vector<std::thread> threads;
-  std::vector<int>thread_sums(THREADS, 0);
-  WRSLIB selector(weights.begin(), weights.end());
-  int iter_per_thread = TOTAL_ITERATIONS/ THREADS;
-  for(int t = 0; t< THREADS; ++t)
-  {
-    threads.emplace_back([&,t](){
-      std::default_random_engine thread_gen (std::random_device{}());
-      
-      int local_sum = 0;
-      for(int i = 0; i< iter_per_thread; ++i)
-      {
-        local_sum+= selector(thread_gen);
-      }
-      thread_sums[t] = local_sum;
-    });
+  for (int i = 0; i < 1000000; i++) {
+    sum = sum + selector(generator);
   }
-  for (auto& th : threads) th.join();
-  for (int s : thread_sums) sum += s;
-
+  
   // end time
   gettimeofday(&end, NULL);
   double elapsedtime_sec = double(end.tv_sec - start.tv_sec) + 
