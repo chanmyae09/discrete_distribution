@@ -21,6 +21,7 @@
 using namespace dense::stochastic;
 
 int main() {
+  std::cout<< "hi";
   int THREADS = 4;
   int TOTAL_ITERATIONS = 1000000;
   std::normal_distribution<float> d(5,2); 
