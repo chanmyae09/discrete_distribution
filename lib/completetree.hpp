@@ -77,7 +77,7 @@ namespace stochastic {
 // we’ll flip storage to std::atomic<T> and wire these to real atomics.
     entry_type atomic_load(position_type node,
                           std::memory_order order = std::memory_order_relaxed) const noexcept {
-      return _tree[node].load(order);;
+      return _tree[node].load(order);
     }
 
     void atomic_store(position_type node, entry_type v,
@@ -85,18 +85,26 @@ namespace stochastic {
       _tree[node].store(v,order);
     }
 
-    entry_type atomic_fetch_add(position_type node, entry_type delta, std::memory_order order = std::memory_order_relaxed) noexcept {
+    entry_type atomic_fetch_add(position_type node, entry_type delta, 
+                                std::memory_order order = std::memory_order_relaxed) noexcept {
       return _tree[node].fetch_add(delta, order);
     }
 
 
-      void add_entry(entry_type&& entry) {
-        _tree.push_back(entry);
-      }
+      // void add_entry(entry_type&& entry) {
+      //   _tree.push_back(entry);
+      // }
+      // void add_entry(const entry_type& entry) {
+      //   _tree.push_back(entry);
+      // }
 
       void add_entry(const entry_type& entry) {
-        _tree.push_back(entry);
+      _tree.emplace_back(entry);  // constructs std::atomic<entry_type>(entry)
       }
+      void add_entry(entry_type&& entry) {
+        _tree.emplace_back(entry);  // same; moving the double is fine
+      }
+
 
       template <typename... Args>
       void emplace_entry(Args&&... args) {

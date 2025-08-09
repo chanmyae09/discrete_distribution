@@ -58,50 +58,83 @@ namespace stochastic {
           BaseTree() 
       {
         //std::cout<<"__________constructor__________"<<std::endl;
-        size_t n = static_cast<size_t>(last - first);
+        // size_t n = static_cast<size_t>(last - first);
         
         for (InputIt it = first; it != last; ++it) {
           Real w = *it;
           BaseTree::add_entry(Real(w));
         }
-        //std::cout<<"all entries added ";
-        //this->PrintTree();
-        
-
-        //go through entire tree and change entries into weightsums of ENTIRE tree
-        //std::cout<<"tree before summing: ";
-        //this->PrintTree();
+        // //std::cout<<"all entries added ";
+        // //this->PrintTree();
+  
+        // //go through entire tree and change entries into weightsums of ENTIRE tree
+        // //std::cout<<"tree before summing: ";
+        // //this->PrintTree();
         node_type lastNonLeaf = (BaseTree::entry_count())/2;
-        //std::cout<<"last non leaf is "<<lastNonLeaf<<std::endl;
-        if (BaseTree::entry_count()%2==0){
-            this->value_of(lastNonLeaf)+=(this->value_of(BaseTree::left_of(lastNonLeaf)));
-            //std::cout<<"last non leaf has 1 child   last non leaf is "<<lastNonLeaf<<std::endl;
-        }
-        else{
-            this->value_of(lastNonLeaf)+=(this->value_of(BaseTree::left_of(lastNonLeaf)))+(this->value_of(BaseTree::right_of(lastNonLeaf)));
-        }
-        //std::cout<<"lastNonLeaf summed"<<std::endl;
-        for (node_type node = lastNonLeaf-1;node>0;node--){
-          //std::cout<<"left val: "<<this->value_of(BaseTree::left_of(node))<<"    right val "<<this->value_of(BaseTree::right_of(node))<<std::endl;
-            this->value_of(node)+=((this->value_of(BaseTree::left_of(node))+(this->value_of(BaseTree::right_of(node)))));
-            //std::cout<<"node "<<node<<" summed    new value is "<<this->value_of(node)<<"   new value variable hols"<<newVal<<std::endl;
-        }
+        // //std::cout<<"last non leaf is "<<lastNonLeaf<<std::endl;
+        // if (BaseTree::entry_count()%2==0){
+        //     this->value_of(lastNonLeaf)+=(this->value_of(BaseTree::left_of(lastNonLeaf)));
+        //     //std::cout<<"last non leaf has 1 child   last non leaf is "<<lastNonLeaf<<std::endl;
+        // }
+        // else{
+        //     this->value_of(lastNonLeaf)+=(this->value_of(BaseTree::left_of(lastNonLeaf)))+(this->value_of(BaseTree::right_of(lastNonLeaf)));
+        // }
+        // //std::cout<<"lastNonLeaf summed"<<std::endl;
+        // for (node_type node = lastNonLeaf-1;node>0;node--){
+        //   //std::cout<<"left val: "<<this->value_of(BaseTree::left_of(node))<<"    right val "<<this->value_of(BaseTree::right_of(node))<<std::endl;
+        //     this->value_of(node)+=((this->value_of(BaseTree::left_of(node))+(this->value_of(BaseTree::right_of(node)))));
+        //     //std::cout<<"node "<<node<<" summed    new value is "<<this->value_of(node)<<"   new value variable hols"<<newVal<<std::endl;
+        // }
 
-        //std::cout<<"weightsum tree: ";
-        //this->PrintTree();
-        total_weight = this->value_of(this->root());
-        //std::cout<<"total weight is "<<total_weight<<std::endl;
-        //go through entire tree again (this time from the top) and subtract the weight of the right subtree
-        for(node_type node = BaseTree::root();node<lastNonLeaf;node++){
-            this->value_of(node)-=(this->value_of(BaseTree::right_of(node)));
-        }
-        //std::cout<<"right subtrees subtracted except in lastNonLeaf"<<std::endl;
-        if (BaseTree::entry_count()%2==1){ //bc size in complete tree returns the size including the 0 index
-            this->value_of(lastNonLeaf)-=(this->value_of(BaseTree::right_of(lastNonLeaf)));
-        }
+        // //std::cout<<"weightsum tree: ";
+        // //this->PrintTree();
+        // total_weight = this->value_of(this->root());
+        // //std::cout<<"total weight is "<<total_weight<<std::endl;
+        // //go through entire tree again (this time from the top) and subtract the weight of the right subtree
+        // for(node_type node = BaseTree::root();node<lastNonLeaf;node++){
+        //     this->value_of(node)-=(this->value_of(BaseTree::right_of(node)));
+        // }
+        // //std::cout<<"right subtrees subtracted except in lastNonLeaf"<<std::endl;
+        // if (BaseTree::entry_count()%2==1){ //bc size in complete tree returns the size including the 0 index
+        //     this->value_of(lastNonLeaf)-=(this->value_of(BaseTree::right_of(lastNonLeaf)));
+        // }
         // std::cout<<"tree after constructing: ";
         //this->PrintTree();
+        // lastNonLeaf adjustments
 
+        if (BaseTree::entry_count() % 2 == 0) {
+          Real v = atomic_load(lastNonLeaf, std::memory_order_relaxed);
+          v += atomic_load(BaseTree::left_of(lastNonLeaf), std::memory_order_relaxed);
+          atomic_store(lastNonLeaf, v, std::memory_order_relaxed);
+        } else {
+            Real v = atomic_load(lastNonLeaf, std::memory_order_relaxed);
+            v += atomic_load(BaseTree::left_of(lastNonLeaf),  std::memory_order_relaxed);
+            v += atomic_load(BaseTree::right_of(lastNonLeaf), std::memory_order_relaxed);
+            atomic_store(lastNonLeaf, v, std::memory_order_relaxed);
+        }
+
+        // internal nodes accumulate children
+        for (node_type node = lastNonLeaf - 1; node > 0; --node) {
+          Real v = atomic_load(node, std::memory_order_relaxed);
+          v += atomic_load(BaseTree::left_of(node),  std::memory_order_relaxed);
+          v += atomic_load(BaseTree::right_of(node), std::memory_order_relaxed);
+          atomic_store(node, v, std::memory_order_relaxed);
+        }
+
+        // total_weight snapshot (local var only)
+        total_weight = atomic_load(this->root(), std::memory_order_relaxed);
+
+        // subtract right subtree on the way down
+        for (node_type node = BaseTree::root(); node < lastNonLeaf; ++node) {
+          Real v = atomic_load(node, std::memory_order_relaxed);
+          v -= atomic_load(BaseTree::right_of(node), std::memory_order_relaxed);
+          atomic_store(node, v, std::memory_order_relaxed);
+        }
+        if (BaseTree::entry_count() % 2 == 1) {
+          Real v = atomic_load(lastNonLeaf, std::memory_order_relaxed);
+          v -= atomic_load(BaseTree::right_of(lastNonLeaf), std::memory_order_relaxed);
+          atomic_store(lastNonLeaf, v, std::memory_order_relaxed);
+        }
       }
 
       sideways_fenwick_selector(sideways_fenwick_selector const&) = default;
@@ -217,13 +250,13 @@ namespace stochastic {
       
 
       //returns the sum of the left subtree and the node itself
-      Real& weightsum_of(node_type n) {
-        return this->value_of(n);
-      }
+      // Real& weightsum_of(node_type n) {
+      //   return this->value_of(n);
+      // }
 
-      const Real& weightsum_of(node_type n) const {
-        return const_cast<This*>(this)->weightsum_of(n);
-      }
+      // const Real& weightsum_of(node_type n) const {
+      //   return const_cast<This*>(this)->weightsum_of(n);
+      // }
 
       
       void update_weight_of_node(node_type givenNode, Real new_weight) {
@@ -337,17 +370,17 @@ namespace stochastic {
         update_weight(BaseTree::entry_count(),v);
       }
 
-        Real weight_of(node_type n) {
-            Real val = atomic_load(n, std::memory_order_relaxed);
-            for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
-              val -= atomic_load(i, std::memory_order_relaxed);
-            }
-            return val;
+      Real weight_of(node_type n) {
+        Real val = atomic_load(n, std::memory_order_relaxed);
+        for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
+          val -= atomic_load(i, std::memory_order_relaxed);
+        }
+        return val;
 	    }
 
-      const Real& weight_of(node_type n) const {
-        return const_cast<This*>(this)->weight_of(n);
-      }
+      // const Real& weight_of(node_type n) const {
+      //   return const_cast<This*>(this)->weight_of(n);
+      // }
 
       
 
