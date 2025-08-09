@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <iostream>
 #include <sys/mman.h>
+#include <atomic>
 
 namespace dense {
 namespace stochastic {
@@ -62,7 +63,7 @@ namespace stochastic {
       void PrintTree()const{
         std::cout<<"printing tree ";
         for(int i=1;i<_tree.size();i++){
-          std::cout<<_tree[i]<<", ";
+          std::cout << _tree[i].load(std::memory_order_relaxed) << ", ";
         }
         std::cout<<std::endl;
       }
@@ -71,7 +72,23 @@ namespace stochastic {
       //
     protected:
 
-      
+    // --- Atomic-style helpers (scaffolding) ---
+// For now these just wrap the non-atomic vector. In the next step,
+// we’ll flip storage to std::atomic<T> and wire these to real atomics.
+    entry_type atomic_load(position_type node,
+                          std::memory_order order = std::memory_order_relaxed) const noexcept {
+      return _tree[node].load(order);;
+    }
+
+    void atomic_store(position_type node, entry_type v,
+                      std::memory_order order = std::memory_order_relaxed) noexcept {
+      _tree[node].store(v,order);
+    }
+
+    entry_type atomic_fetch_add(position_type node, entry_type delta, std::memory_order order = std::memory_order_relaxed) noexcept {
+      return _tree[node].fetch_add(delta, order);
+    }
+
 
       void add_entry(entry_type&& entry) {
         _tree.push_back(entry);
@@ -179,7 +196,7 @@ namespace stochastic {
       size_type entry_count() const { return size() - 1; }
       
     private:
-      std::vector<entry_type> _tree;
+      std::vector<std::atomic<entry_type>> _tree;
   };
 
 }
