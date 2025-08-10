@@ -38,11 +38,11 @@ int main() {
   }
     //start time
   struct timeval start, end;
+  WRSLIB selector(weights.begin(), weights.end());
   gettimeofday(&start, NULL);
 
   std::vector<std::thread> threads;
   std::vector<int>thread_sums(THREADS, 0);
-  WRSLIB selector(weights.begin(), weights.end());
   int iter_per_thread = TOTAL_ITERATIONS/ THREADS;
   for(int t = 0; t< THREADS; ++t)
   {

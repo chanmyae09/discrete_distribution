@@ -22,10 +22,12 @@
 using namespace dense::stochastic;
 
 int main() {
+  int THREADS = THREADNUM;
+  int TOTAL_ITERATIONS = 1200000;
   std::uniform_real_distribution<float> d(1,10); 
   std::default_random_engine generator;
   std::vector<float> weights = {};
-  
+  weights.reserve(WEIGHTNUM)
   for(int i = 0; i < WEIGHTNUM; i++){
     weights.push_back(d(generator));
   }	      
@@ -39,11 +41,21 @@ int main() {
   struct timeval start, end;
   WRSLIB selector(weights.begin(), weights.end());
   gettimeofday(&start, NULL);
+
+  std::vector<std::thread> threads;
+  std::vector<int>thread_sums(THREADS, 0);
+  int iter_per_thread = TOTAL_ITERATIONS/ THREADS;
   
-  for (int i = 0; i < 1000000; i++) {
-    int index = selector(generator);
-    selector.update_weight(index, std::max<float>(0.0, d(generator)-minweight));
+  for (int t = 0; t < THREADS; ++t) {
+    threads.emplace_back([&, t]() {
+      std::default_random_engine thread_gen(std::random_device{}());
+      for (int i = 0; i < iter_per_thread; ++i) {
+        int index = selector(thread_gen);
+        selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
+      }
+    });
   }
+  for (auto& th : threads) th.join();
   
   // end time
   gettimeofday(&end, NULL);
