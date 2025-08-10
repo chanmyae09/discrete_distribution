@@ -12,9 +12,9 @@
 namespace dense {
 namespace stochastic {
 
-  typedef double Real;
+   typedef double Real;
    template <typename P, typename T>
-   class complete_tree;  // forward declare (or put the full non-atomic def here)
+   class complete_tree; 
 
    template <typename P,typename U>
    class complete_tree <P, std::atomic<U>>{
@@ -63,23 +63,20 @@ namespace stochastic {
          std::cout<<std::endl;
       }
    protected:
-      entry_type atomic_load(position_type node,
-                           std::memory_order order = std::memory_order_seq_cst) const noexcept {
+      entry_type atomic_load(position_type node, std::memory_order order = std::memory_order_seq_cst) const noexcept {
          return _tree[node].load(order);
       }
 
-      void atomic_store(position_type node, entry_type v,
-                        std::memory_order order = std::memory_order_seq_cst) noexcept {
+      void atomic_store(position_type node, entry_type v, std::memory_order order = std::memory_order_seq_cst) noexcept {
          _tree[node].store(v,order);
       }
 
-      entry_type atomic_fetch_add(position_type node, entry_type delta, 
-                                 std::memory_order order = std::memory_order_seq_cst) noexcept {
+      entry_type atomic_fetch_add(position_type node, entry_type delta, std::memory_order order = std::memory_order_seq_cst) noexcept {
          return _tree[node].fetch_add(delta, order);
       }
 
       void add_entry(value_type v) {
-      _tree.emplace_back(v);  // constructs std::atomic<entry_type>(entry)
+      _tree.emplace_back(v); 
       }
 
       template <typename... Args>
