@@ -1,5 +1,5 @@
-#ifndef SIDEWAYS_FENWICK_RANDOM_SELECTOR
-#define SIDEWAYS_FENWICK_RANDOM_SELECTOR
+#ifndef SIDEWAYS_FENWICK_RANDOM_SELECTOR_ATOMIC
+#define SIDEWAYS_FENWICK_RANDOM_SELECTOR_ATOMIC
 ////////////////////////////////IMPORTANT/////////////////////////////////////
 //must compile this file using the -std=c++20 flag
 //compiling testingDistributions: g++ -std=c++20 test/testingDistributions.cpp
@@ -17,6 +17,8 @@
 #include <random>
 #include <emmintrin.h>
 #include <atomic>
+#include <iterator> 
+
 
 #include "completetree_atomic.hpp"
 
@@ -27,7 +29,7 @@ namespace stochastic {
   template <
     typename I = size_t, size_t precision = std::numeric_limits<Real>::digits
   >
-  class sideways_fenwick_selector :
+  class sideways_fenwick_selector_atomic :
     //Extends a complete tree...
     protected complete_tree<I, std::atomic<Real> >
   {
@@ -35,7 +37,7 @@ namespace stochastic {
 
       using size_type = std::ptrdiff_t;
       using index_type = I;
-      using This = sideways_fenwick_selector<index_type, precision>;
+      using This = sideways_fenwick_selector_atomic<index_type, precision>;
       using node_type = index_type;
       using value_type = Real;
       using entry_type = Real;
@@ -49,18 +51,18 @@ namespace stochastic {
       using BaseTree::atomic_fetch_add;
 
 
-      sideways_fenwick_selector() = delete;
+      sideways_fenwick_selector_atomic() = delete;
 
       template<typename InputIt>
-      sideways_fenwick_selector(InputIt first, InputIt last) :
+      sideways_fenwick_selector_atomic(InputIt first, InputIt last) :
         BaseTree(last-first) 
       {
         //std::cout<<"__________constructor__________"<<std::endl;
         // size_t n = static_cast<size_t>(last - first);
-        
+        node_type idx = BaseTree::root(); 
         for (InputIt it = first; it != last; ++it) {
-          Real w = *it;
-          BaseTree::add_entry(Real(w));
+          atomic_store(idx, static_cast<Real>(*it), std::memory_order_seq_cst);
+          ++idx;
         }
         node_type lastNonLeaf = (BaseTree::entry_count())/2;
         if (BaseTree::entry_count() % 2 == 0) {
@@ -98,15 +100,15 @@ namespace stochastic {
         }
       }
 
-      sideways_fenwick_selector(sideways_fenwick_selector const&) = default;
+      sideways_fenwick_selector_atomic(sideways_fenwick_selector_atomic const&) = default;
 
-      sideways_fenwick_selector(sideways_fenwick_selector &&) = default;
+      sideways_fenwick_selector_atomic(sideways_fenwick_selector_atomic &&) = default;
 
-      sideways_fenwick_selector& operator=(sideways_fenwick_selector const&) = default;
+      sideways_fenwick_selector_atomic& operator=(sideways_fenwick_selector_atomic const&) = default;
 
-      sideways_fenwick_selector& operator=(sideways_fenwick_selector &&) = default;
+      sideways_fenwick_selector_atomic& operator=(sideways_fenwick_selector_atomic &&) = default;
 
-      ~sideways_fenwick_selector() = default;
+      ~sideways_fenwick_selector_atomic() = default;
 
 
       // //Methods of WeightSum we want to make available
@@ -248,7 +250,7 @@ namespace stochastic {
         BaseTree::pop_entry();
       }
 
-      sideways_fenwick_selector const& const_this() const {
+      sideways_fenwick_selector_atomic const& const_this() const {
         return static_cast<This const&>(*this);
       }
 //Helper functions to make sure that I don't mess up the offsets (since, from the user's perspectice, id's start at 0, but the nodes are indexed starting at 1)

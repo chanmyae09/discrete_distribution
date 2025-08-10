@@ -31,8 +31,9 @@ namespace stochastic {
       // using const_reference = entry_type const&;
 
       explicit complete_tree(position_type reserve = 0) {
-        _tree.reserve(static_cast<size_type>(reserve) + 1);
-        _tree.emplace_back();
+         std::vector<storage_type> tmp(static_cast<size_type>(reserve) + 1);
+         _tree.swap(tmp);
+         _tree[0].store(value_type{}, std::memory_order_seq_cst);
       }
 
       complete_tree(complete_tree const&) = delete;

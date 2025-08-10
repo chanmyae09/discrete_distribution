@@ -13,12 +13,14 @@
 #include "sideways_fenwick_selector.hpp"
 #include "old_sideways_fenwick_selector.hpp"
 #include "sideways_fenwick_selector_bitcast.hpp"
+#include "sideways_fenwick_selector_atomic.hpp"
 #include "incremental_leaf_sum_tree.hpp"
 #include <sys/time.h>
 #include <iostream>
 #include <random>
 #include <vector>
 #include <algorithm>
+#include <thread>     
 using namespace dense::stochastic;
 
 int main() {
@@ -27,7 +29,7 @@ int main() {
   std::uniform_real_distribution<float> d(1,10); 
   std::default_random_engine generator;
   std::vector<float> weights = {};
-  weights.reserve(WEIGHTNUM)
+  weights.reserve(WEIGHTNUM);
   for(int i = 0; i < WEIGHTNUM; i++){
     weights.push_back(d(generator));
   }	      
