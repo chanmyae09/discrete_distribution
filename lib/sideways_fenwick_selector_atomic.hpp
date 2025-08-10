@@ -18,7 +18,7 @@
 #include <emmintrin.h>
 #include <atomic>
 
-#include "completetree.hpp"
+#include "completetree_atomic.hpp"
 
 namespace dense {
 namespace stochastic {

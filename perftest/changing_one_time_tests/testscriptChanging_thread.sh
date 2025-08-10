@@ -13,7 +13,7 @@ echo "uniform_changing_sideways_fenwick" > results_${2}_${3}.csv
 
 
 # Uniform distribution static weight multithread tests
-g++ -std=c++20 -I../../lib -O3 "-DWRSLIB=sideways_fenwick_selector<>" "-DWEIGHTNUM=$2" "-DTHREADNUM=$3" -o test0 uniform_changing.cpp
+g++ -std=c++20 -I../../lib -O3 "-DWRSLIB=sideways_fenwick_selector_atomic<>" "-DWEIGHTNUM=$2" "-DTHREADNUM=$3" -o test0 uniform_changing.cpp
 
 # Initialize sums
 sum0=0
