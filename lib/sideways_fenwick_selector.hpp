@@ -18,7 +18,7 @@
 #include <emmintrin.h>
 #include <atomic>
 
-#include "completetree_atomic.hpp"
+#include "completetree_array.hpp"
 
 
 namespace dense {
@@ -83,7 +83,7 @@ namespace stochastic {
 
         //std::cout<<"weightsum tree: ";
         //this->PrintTree();
-        total_weight = this->value_of(this->root());
+        total_weight.store(this->value_of(this->root()), std::memory_order_relaxed);
         //std::cout<<"total weight is "<<total_weight<<std::endl;
         //go through entire tree again (this time from the top) and subtract the weight of the right subtree
         for(node_type node = BaseTree::root();node<lastNonLeaf;node++){
@@ -116,7 +116,8 @@ namespace stochastic {
       
       template<class URNG>
       index_type operator()(URNG& g) {
-        Real target =  std::generate_canonical<Real, precision, URNG>(g)*total_weight;
+        auto tw = total_weight.load(std::memory_order_seq_cst); 
+        Real target =  std::generate_canonical<Real, precision, URNG>(g)*tw;
 
         node_type node = this->root();
         node_type lastNonLeaf = BaseTree::entry_count()/2;
@@ -161,24 +162,24 @@ namespace stochastic {
       }
 
 
-      void push_back(const entry_type& e) {
-        value_type v = e;
-        BaseTree::add_entry(0);
-        update_weight_of_node(BaseTree::last(),v);
-      }
-      void push_back(const entry_type&& e) {
-        value_type v = e;
-        BaseTree::add_entry(0);
-        update_weight_of_node(BaseTree::last(),v);
-      }
-      void pop_back() {
-        update_weight_of_node(BaseTree::last(),0);
-        BaseTree::pop_back();
-      }
+      // void push_back(const entry_type& e) {
+      //   value_type v = e;
+      //   BaseTree::add_entry(0);
+      //   update_weight_of_node(BaseTree::last(),v);
+      // }
+      // void push_back(const entry_type&& e) {
+      //   value_type v = e;
+      //   BaseTree::add_entry(0);
+      //   update_weight_of_node(BaseTree::last(),v);
+      // }
+      // void pop_back() {
+      //   update_weight_of_node(BaseTree::last(),0);
+      //   BaseTree::pop_back();
+      // }
 
     private:
 
-      Real total_weight=0;
+      std::atomic<Real> total_weight=0;
       //helper function to return the next node to update
       node_type nextNode(node_type currentNode){
         return currentNode>>(((std::countr_one(currentNode)))+1);
@@ -195,45 +196,14 @@ namespace stochastic {
       
       
       void update_weight_of_node(node_type givenNode, Real new_weight) {
-        size_t node = givenNode;
-        __m128d weightDifference =  _mm_set_pd(new_weight - weight_of(node), 0.0);
-        //total_weight += weightDifference;
-        __m128d fromLeft;
-        __m128i ssenode = _mm_set_epi64x(node, 0);
-        fromLeft = _mm_castsi128_pd(_mm_set_epi64x(-1, 0));
-        //int depthDiff=std::countl_zero(node) - std::countl_zero(BaseTree::entry_count());
-        //std::cout << "Node before: " << std::bitset<64>(node) << std::endl;
-        // node = ~node;
-        // //std::cout << "Node after flipping: " << std::bitset<64>(node) << std::endl;
-
-        // node=node << depthDiff;
-        // //std::cout << "Node afrer shifting: " << std::bitset<64>(node) << std::endl;
-
-        // node=~node;
-        
-        // //std::cout << "Node after: " << std::bitset<64>(node) << std::endl;
-
-        // //std::cout << "node is " << node << "and entry count is " << BaseTree::entry_count() << std::endl;
-        // // if(node > BaseTree::entry_count()) {
-        // //   node = BaseTree::parent_of(node);
-        // // }
-        // //std::cout << "node is " << node << "and entry count is " << BaseTree::entry_count() << std::endl;
-        // node = node >> (node > BaseTree::entry_count());
-        
-
+        auto node = node_of(i);
+        Real weightDifference =  new_weight - this->weight_of(node);
+        total_weight.fetch_add(weightDifference, std::memory_order_seq_cst);
         while(node>=BaseTree::root()){
-            //auto oldval = this->value_of(node);
-            __m128d masked_real;
-            masked_real = _mm_and_pd(weightDifference, fromLeft);
-            //masked_real = reinterpret_cast<int64_t&>(weightDifference) & fromLeft;
-
-
-            _mm_store_sd(&(this->value_of(node)), _mm_add_sd(_mm_load_sd(&(this->value_of(node))), masked_real));
-            fromLeft = _mm_castsi128_pd(_mm_sub_epi64(_mm_and_si128(ssenode, _mm_set_epi64x(1, 0)), _mm_set_epi64x(1, 0)));
-            ssenode = _mm_srli_epi64(ssenode, 1);
-            node = BaseTree::parent_of(node);
-            
+          this->value_of(node)+=weightDifference;
+          node = nextNode(node);
         }
+
       }
 
         
