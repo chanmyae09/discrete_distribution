@@ -22,7 +22,13 @@ g++ -std=c++20 -I../../lib -O3 -pthread \
 sum0=0
 
 for ((i=1; i<=$1; i++)); do
-    result0=$(./test0 | tee -a results_${2}_${3}.csv | grep -E '^[0-9.]+$')
+    # result0=$(./test0 | tee -a results_${2}_${3}.csv | grep -E '^[0-9.]+$')
+    # sum0=$(awk "BEGIN { printf \"%.6f\", $sum0 + $result0 }")
+
+    result0=$(./test0)
+
+    echo "$result0" >> results_${2}_${3}.csv
+
     sum0=$(awk "BEGIN { printf \"%.6f\", $sum0 + $result0 }")
 done
 

@@ -196,7 +196,7 @@ namespace stochastic {
       
       
       void update_weight_of_node(node_type givenNode, Real new_weight) {
-        auto node = node_of(i);
+        auto node = node_of(givenNode);
         Real weightDifference =  new_weight - this->weight_of(node);
         total_weight.fetch_add(weightDifference, std::memory_order_seq_cst);
         while(node>=BaseTree::root()){

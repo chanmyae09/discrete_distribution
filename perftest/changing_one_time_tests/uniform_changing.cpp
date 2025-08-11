@@ -13,7 +13,6 @@
 #include "sideways_fenwick_selector.hpp"
 #include "old_sideways_fenwick_selector.hpp"
 #include "sideways_fenwick_selector_bitcast.hpp"
-#include "sideways_fenwick_selector_atomic.hpp"
 #include "incremental_leaf_sum_tree.hpp"
 #include <sys/time.h>
 #include <iostream>
@@ -42,7 +41,7 @@ int main() {
   //start time
   struct timeval start, end;
   WRSLIB selector(weights.begin(), weights.end());
-  selector.PrintTreePublic();
+  // selector.PrintTreePublic();
   gettimeofday(&start, NULL);
 
   std::vector<std::thread> threads;
@@ -54,7 +53,7 @@ int main() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
         int index = selector(thread_gen);
-        // selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
+        selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
       }
     });
   }
@@ -63,9 +62,10 @@ int main() {
   // end time
   gettimeofday(&end, NULL);
   double elapsedtime_sec = double(end.tv_sec - start.tv_sec) + 
-    double(end.tv_usec - start.tv_usec)/1000000.0;
+  double(end.tv_usec - start.tv_usec)/1000000.0;
   std::cout << elapsedtime_sec << std::endl;
-  selector.PrintTreePublic();
+  // selector.PrintTreePublic();
+
   
 }
 
