@@ -150,8 +150,6 @@ namespace stochastic {
           return id_of(nextNode(node));
           
         }
-
-
       }
 
       void update_weight(index_type i, Real new_weight) {
@@ -237,9 +235,7 @@ namespace stochastic {
             
         }
       }
-  
 
-//}
         
     private:
 
@@ -265,15 +261,19 @@ namespace stochastic {
           return val;
 	    }
 
-      const Real& weight_of(node_type n) const {
-        return const_cast<This*>(this)->weight_of(n);
-      }
+      // const Real& weight_of(node_type n) const {
+      //   return const_cast<This*>(this)->weight_of(n);
+      // }
+      /* This is returning a reference to a temporary. it calls return by value, which is a temporary, const cast to this value doesn't make sense cuz it's
+      thrown away when the function ends, also sideway fenwick tree stores its weight and left subtree, what does it mean to 
+      return by const reference  */
 
-      void pop_entry() {
-        update_weight(BaseTree::last(),0);
-        BaseTree::pop_entry();
-      }
 
+      // void pop_entry() {
+      //   update_weight(BaseTree::last(),0);
+      //   BaseTree::pop_entry(); // only pop_back
+      // }
+      /* Should be delted , cuz it's delted in completetree_atomic*/
       sideways_fenwick_selector const& const_this() const {
         return static_cast<This const&>(*this);
       }
