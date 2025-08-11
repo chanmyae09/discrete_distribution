@@ -42,6 +42,7 @@ int main() {
   //start time
   struct timeval start, end;
   WRSLIB selector(weights.begin(), weights.end());
+  selector.PrintTreePublic();
   gettimeofday(&start, NULL);
 
   std::vector<std::thread> threads;
@@ -53,7 +54,7 @@ int main() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
         int index = selector(thread_gen);
-        selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
+        // selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
       }
     });
   }
@@ -64,6 +65,7 @@ int main() {
   double elapsedtime_sec = double(end.tv_sec - start.tv_sec) + 
     double(end.tv_usec - start.tv_usec)/1000000.0;
   std::cout << elapsedtime_sec << std::endl;
+  selector.PrintTreePublic();
   
 }
 

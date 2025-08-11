@@ -16,8 +16,9 @@
 #include <bitset>
 #include <random>
 #include <emmintrin.h>
+#include <atomic>
 
-#include "completetree.hpp"
+#include "completetree_atomic.hpp"
 
 
 namespace dense {
@@ -29,7 +30,7 @@ namespace stochastic {
   >
   class sideways_fenwick_selector :
     //Extends a complete tree...
-    protected complete_tree<I, Real >
+    protected complete_tree<I, std::atomic<Real> >
   {
 
 
@@ -45,16 +46,15 @@ namespace stochastic {
       using const_iterator = value_type const*;
       using reference = value_type&;
       using const_reference = value_type const&;
-      using BaseTree = complete_tree<node_type, value_type>;
+      using BaseTree = complete_tree<node_type, std::atomic<value_type>>;
 
       sideways_fenwick_selector() = delete;
 
       template<typename InputIt>
       sideways_fenwick_selector(InputIt first, InputIt last) :
-          BaseTree() 
+          BaseTree(static_cast<node_type>(std::distance(first, last))) 
       {
         //std::cout<<"__________constructor__________"<<std::endl;
-        size_t n = static_cast<size_t>(last - first);
         
         for (InputIt it = first; it != last; ++it) {
           Real w = *it;
@@ -62,8 +62,6 @@ namespace stochastic {
         }
         //std::cout<<"all entries added ";
         //this->PrintTree();
-        
-
         //go through entire tree and change entries into weightsums of ENTIRE tree
         //std::cout<<"tree before summing: ";
         //this->PrintTree();
@@ -98,6 +96,9 @@ namespace stochastic {
         // std::cout<<"tree after constructing: ";
         //this->PrintTree();
 
+      }
+      void PrintTreePublic() const {
+        this->PrintTree();
       }
 
       sideways_fenwick_selector(sideways_fenwick_selector const&) = default;
@@ -155,32 +156,12 @@ namespace stochastic {
 
       void update_weight(index_type i, Real new_weight) {
         update_weight_of_node(node_of(i),new_weight);
-        // std::cout<<"________________updating weight_____________"<<std::endl;
-        // auto node = node_of(i);
-        // Real weightDifference =  new_weight - this->weight_of(node);
-        // total_weight+=weightDifference;
-        // std::cout<<"updating node "<<node<<" to contain "<<new_weight<<" instead of "<<this->weight_of(node)<<" which is a difference of "<<weightDifference<<std::endl;
-        // while(node>BaseTree::root()){
-        //     this->value_of(node)+=weightDifference;
-        //     //std::cout<<"about to change node ";
-        //     //this->PrintTree();
-        //     node = nextNode(node);
-        //     //std::cout<<"just changed node ";
-        //     //this->PrintTree();
-
-        //     //std::cout<<"new node is "<<node<<std::endl;
-            
-        // }
-        // this->value_of(node)+=weightDifference;
-        // //std::cout<<"ending tree is ";
-        // //this->PrintTree();
       }
 
       Real get_weight(index_type i) {
         return weight_of(node_of(i));
       }
 
-    //   Real total_weight() const { return WeightSum::total_weight(); }
 
       void push_back(const entry_type& e) {
         value_type v = e;
@@ -204,11 +185,6 @@ namespace stochastic {
       node_type nextNode(node_type currentNode){
         return currentNode>>(((std::countr_one(currentNode)))+1);
       }
-
-      
-
-      
-
       //returns the sum of the left subtree and the node itself
       Real& weightsum_of(node_type n) {
         return this->value_of(n);
@@ -261,45 +237,10 @@ namespace stochastic {
             
         }
       }
-      
-     ///*
-
-
-      // void update_weight_of_node(node_type givenNode, Real new_weight) {
-      //   //std::cout<<"________________updating weight_____________"<<std::endl;
-      //   auto node = givenNode;
-      //   Real weightDifference =  new_weight - this->weight_of(node);
-      //   total_weight+=weightDifference;
-      //   //std::cout<<"updating node "<<node<<" to contain "<<new_weight<<" instead of "<<this->weight_of(node)<<" which is a difference of "<<weightDifference<<std::endl;
-      //   auto nextUpdate = nextNode(node);
-      //   while(node>=BaseTree::root()){
-            
-      //       this->value_of(node)+=weightDifference; // SKIP VERSION
-      //       node = nextNode(node); //SKIP VERSION
-
-
-      //       //std::cout<<"just changed node ";
-      //       //this->PrintTree();
-
-      //       //std::cout<<"new node is "<<node<<std::endl;
-            
-      //   }
-      //   //this->value_of(node)+=weightDifference;
-      //   //std::cout<<"ending tree is ";
-      //   //this->PrintTree();
-      // }
-        
-
-
+  
 
 //}
         
-        
-
-      
-
-    //   Real total_weight() const { return WeightSum::total_weight(); }
-
     private:
 
       //helper function to return the next node to update
@@ -316,19 +257,17 @@ namespace stochastic {
         update_weight(BaseTree::entry_count(),v);
       }
 
-        Real weight_of(node_type n) {
-            auto val = this->value_of(n);
-            for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
-              val -= this->value_of(i);
-            }
-            return val;
+      Real weight_of(node_type n) {
+          auto val = this->value_of(n);
+          for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
+            val -= this->value_of(i);
+          }
+          return val;
 	    }
 
       const Real& weight_of(node_type n) const {
         return const_cast<This*>(this)->weight_of(n);
       }
-
-      
 
       void pop_entry() {
         update_weight(BaseTree::last(),0);
@@ -338,9 +277,6 @@ namespace stochastic {
       sideways_fenwick_selector const& const_this() const {
         return static_cast<This const&>(*this);
       }
-
-      
-
 
 //Helper functions to make sure that I don't mess up the offsets (since, from the user's perspectice, id's start at 0, but the nodes are indexed starting at 1)
       index_type id_of(node_type node) {
