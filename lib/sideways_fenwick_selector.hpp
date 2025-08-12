@@ -17,6 +17,8 @@
 #include <random>
 #include <emmintrin.h>
 #include <atomic>
+#include <cstdio>   // for fprintf
+
 
 #include "completetree_array.hpp"
 
@@ -101,11 +103,11 @@ namespace stochastic {
         this->PrintTree();
       }
 
-      sideways_fenwick_selector(sideways_fenwick_selector const&) = default;
+      sideways_fenwick_selector(sideways_fenwick_selector const&) = delete;
 
       sideways_fenwick_selector(sideways_fenwick_selector &&) = default;
 
-      sideways_fenwick_selector& operator=(sideways_fenwick_selector const&) = default;
+      sideways_fenwick_selector& operator=(sideways_fenwick_selector const&) = delete;
 
       sideways_fenwick_selector& operator=(sideways_fenwick_selector &&) = default;
 
@@ -196,7 +198,7 @@ namespace stochastic {
       
       
       void update_weight_of_node(node_type givenNode, Real new_weight) {
-        auto node = node_of(givenNode);
+        auto node = givenNode;
         Real weightDifference =  new_weight - this->weight_of(node);
         total_weight.fetch_add(weightDifference, std::memory_order_seq_cst);
         while(node>=BaseTree::root()){
@@ -224,11 +226,11 @@ namespace stochastic {
       }
 
       Real weight_of(node_type n) {
-          auto val = this->value_of(n);
-          for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
-            val -= this->value_of(i);
-          }
-          return val;
+        auto val = this->value_of(n);
+        for (auto i = BaseTree::left_of(n); i <this->size(); i=BaseTree::right_of(i)) {
+          val -= this->value_of(i);
+        }
+        return val;
 	    }
 
       // const Real& weight_of(node_type n) const {

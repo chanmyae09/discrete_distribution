@@ -10,6 +10,7 @@
 #include <atomic>
 #include <stdexcept>
 #include <memory>
+#include <cassert>
 #include "completetree.hpp"
 
 namespace dense {
@@ -70,11 +71,11 @@ namespace stochastic {
       }
 
       static position_type left_of(position_type node) {
-        return (node << 1);
+         return (node << 1);
       }
 
       static position_type right_of(position_type node) {
-        return (node << 1) + 1;
+         return  (node << 1) + 1;
       }
       class reference
       {
@@ -88,7 +89,7 @@ namespace stochastic {
             storage_type* p_;
       };
       reference value_of(position_type i)       { return reference(&_tree[i]); }
-      entry_type value_of(position_type i) const { return _tree[i].load(std::memory_order_seq_cst); }
+      entry_type value_of(position_type i) const {  return _tree[i].load(std::memory_order_seq_cst); }
 
       reference operator[](position_type i) { return reference(&_tree[i]);}
       entry_type operator[](position_type i) const { return _tree[(i)].load(std::memory_order_seq_cst); }
