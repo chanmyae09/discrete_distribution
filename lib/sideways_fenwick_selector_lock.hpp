@@ -227,6 +227,7 @@ namespace stochastic {
           this->value_of(node)+=weightDifference;
           node = nextNode(node);
         }
+        total_weight.fetch_add(weightDifference, std::memory_order_relaxed);
         sp_lock.unlock();
       } 
 
