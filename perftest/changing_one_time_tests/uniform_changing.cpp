@@ -11,6 +11,7 @@
 #include "leaf_sum_tree_selector.hpp"
 #include "leaf_sum_tree_split.hpp"
 #include "sideways_fenwick_selector.hpp"
+#include "sideways_fenwick_selector_lock.hpp"
 #include "old_sideways_fenwick_selector.hpp"
 #include "sideways_fenwick_selector_bitcast.hpp"
 #include "incremental_leaf_sum_tree.hpp"

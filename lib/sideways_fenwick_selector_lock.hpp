@@ -1,5 +1,5 @@
-#ifndef SIDEWAYS_FENWICK_RANDOM_SELECTOR
-#define SIDEWAYS_FENWICK_RANDOM_SELECTOR
+#ifndef SIDEWAYS_FENWICK_RANDOM_SELECTOR_LOCK
+#define SIDEWAYS_FENWICK_RANDOM_SELECTOR_LOCK
 ////////////////////////////////IMPORTANT/////////////////////////////////////
 //must compile this file using the -std=c++20 flag
 //compiling testingDistributions: g++ -std=c++20 test/testingDistributions.cpp
@@ -25,10 +25,10 @@
 
 namespace dense {
 namespace stochastic {
-  struct SpinLock()
+  struct SpinLock
   {
     std::atomic_flag flag;
-    spinLock() = default;
+    SpinLock() = default;
     SpinLock(const SpinLock&)            = delete;
     SpinLock& operator=(const SpinLock&) = delete;
     void lock() noexcept
@@ -39,13 +39,13 @@ namespace stochastic {
     {
       flag.clear(std::memory_order_release);
     }
-  }
+  };
   
 
   template <
     typename I = size_t, size_t precision = std::numeric_limits<Real>::digits
   >
-  class sideways_fenwick_selector :
+  class sideways_fenwick_selector_lock :
     //Extends a complete tree...
     protected complete_tree<I, std::atomic<Real> >
   {
@@ -55,7 +55,7 @@ namespace stochastic {
 
       using size_type = std::ptrdiff_t;
       using index_type = I;
-      using This = sideways_fenwick_selector<index_type, precision>;
+      using This = sideways_fenwick_selector_lock<index_type, precision>;
       using node_type = index_type;
       using value_type = Real;
       using entry_type = Real;
@@ -64,12 +64,12 @@ namespace stochastic {
       using reference = value_type&;
       using const_reference = value_type const&;
       using BaseTree = complete_tree<node_type, std::atomic<value_type>>;
-      static constexpr unsigned BAND_LEVELS = 2;
+      static constexpr unsigned BAND_LEVELS = 5;
 
-      sideways_fenwick_selector() = delete;
+      sideways_fenwick_selector_lock() = delete;
 
       template<typename InputIt>
-      sideways_fenwick_selector(InputIt first, InputIt last) :
+      sideways_fenwick_selector_lock(InputIt first, InputIt last) :
           BaseTree(static_cast<node_type>(std::distance(first, last))) 
       {
         //std::cout<<"__________constructor__________"<<std::endl;
@@ -119,15 +119,15 @@ namespace stochastic {
         this->PrintTree();
       }
 
-      sideways_fenwick_selector(sideways_fenwick_selector const&) = delete;
+      sideways_fenwick_selector_lock(sideways_fenwick_selector_lock const&) = delete;
 
-      sideways_fenwick_selector(sideways_fenwick_selector &&) = default;
+      sideways_fenwick_selector_lock(sideways_fenwick_selector_lock &&) = default;
 
-      sideways_fenwick_selector& operator=(sideways_fenwick_selector const&) = delete;
+      sideways_fenwick_selector_lock& operator=(sideways_fenwick_selector_lock const&) = delete;
 
-      sideways_fenwick_selector& operator=(sideways_fenwick_selector &&) = default;
+      sideways_fenwick_selector_lock& operator=(sideways_fenwick_selector_lock &&) = default;
 
-      ~sideways_fenwick_selector() = default;
+      ~sideways_fenwick_selector_lock() = default;
 
 
       // //Methods of WeightSum we want to make available
@@ -196,7 +196,7 @@ namespace stochastic {
       // }
 
     private:
-      SpinLock sp_lock();
+      SpinLock sp_lock;
       static constexpr node_type LOCK_NODE_INDEX = (node_type(1) << BAND_LEVELS ) -1;
 
       std::atomic<Real> total_weight=0;
@@ -218,9 +218,7 @@ namespace stochastic {
         Real weightDifference =  new_weight - this->weight_of(node);
 
         while(node>=LOCK_NODE_INDEX){
-          else{
-            this->value_of(node)+=weightDifference;
-          }
+          this->value_of(node)+=weightDifference;
           node = nextNode(node);
         }
         sp_lock.lock();
@@ -236,7 +234,7 @@ namespace stochastic {
       
       static inline bool in_band(node_type n)
       {
-        return n < MAX_BAND_INDEX;
+        return n < LOCK_NODE_INDEX;
       }
       static inline unsigned level_of (node_type n)
       {
@@ -274,7 +272,7 @@ namespace stochastic {
       //   BaseTree::pop_entry(); // only pop_back
       // }
       /* Should be delted , cuz it's delted in completetree_atomic*/
-      sideways_fenwick_selector const& const_this() const {
+      sideways_fenwick_selector_lock const& const_this() const {
         return static_cast<This const&>(*this);
       }
 
