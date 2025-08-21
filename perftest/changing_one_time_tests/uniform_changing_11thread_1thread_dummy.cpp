@@ -24,6 +24,7 @@
 using namespace dense::stochastic;
 
 int main() {
+  std::atomic<double> dummy{0};
   int THREADS = 12;
   int TOTAL_ITERATIONS = 1200000;
   std::uniform_real_distribution<float> d(1,10); 
@@ -54,6 +55,7 @@ int main() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
         int index = selector(thread_gen);
+        dummy.fetch_add(static_cast<double>(index));
       }
     });
   }
@@ -62,6 +64,7 @@ int main() {
       for (int i = 0; i < iter_per_thread; ++i) {
         int index = selector(thread_gen);
         selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
+        dummy.fetch_add(static_cast<double>(index));
       }
     });
   for (auto& th : threads) th.join();
