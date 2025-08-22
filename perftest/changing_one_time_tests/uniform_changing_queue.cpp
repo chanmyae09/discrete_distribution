@@ -45,7 +45,7 @@ int main() {
   std::vector<float>glb_weight(THREADS, 1);
   WRSLIB Tselector(glb_weight.begin(),glb_weight.end());
   // WRSLIB selector(weights.begin(), weights.end());
-  std::vector<WRSLIB> Lselectors;
+  std::vector<std::unique_ptr<WRSLIB>> Lselectors;
   Lselectors.reserve(THREADS);
   int base = WEIGHTNUM / THREADS;
   int rem  = WEIGHTNUM % THREADS;
@@ -55,7 +55,7 @@ int main() {
     int chunk = base;
     auto first = weights.begin()+ offset;
     auto last = first+ chunk;
-    Lselectors.emplace_back(WRSLIB{first, last});
+    Lselectors.emplace_back(std::make_unique<WRSLIB>(first, last));
     offset+=chunk;
   }
   std::vector<std::atomic<std::size_t>>mock_queue(THREADS);
@@ -72,9 +72,9 @@ int main() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
         int i0 = Tselector(thread_gen);
-        int i1 = Lselectors[i0](thread_gen);
+        int i1 = (*Lselectors[i0])(thread_gen);
         mock_queue[i1%THREADS].fetch_add(i0);
-        Lselectors[t].update_weight(i1, std::max<float>(0.0f, d(thread_gen) - minweight));
+        Lselectors[t]->update_weight(i1, std::max<float>(0.0f, d(thread_gen) - minweight));
       }
     });
   }
