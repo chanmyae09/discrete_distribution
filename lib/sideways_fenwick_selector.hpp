@@ -85,7 +85,7 @@ namespace stochastic {
 
         //std::cout<<"weightsum tree: ";
         //this->PrintTree();
-        total_weight.store(this->value_of(this->root()), std::memory_order_relaxed);
+        total_weight.store(this->value_of(this->root()), std::memory_order_seq_cst);
         //std::cout<<"total weight is "<<total_weight<<std::endl;
         //go through entire tree again (this time from the top) and subtract the weight of the right subtree
         for(node_type node = BaseTree::root();node<lastNonLeaf;node++){

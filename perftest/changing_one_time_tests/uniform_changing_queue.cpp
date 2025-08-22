@@ -42,12 +42,23 @@ int main() {
 
   //start time
   struct timeval start, end;
-  WRSLIB selector_global(0,THREAD);
-  WRSLIB selector(weights.begin(), weights.end());
-  vector<WRSLIB> mock_queue;
-  for(int i = 0; i< THREAD; ++i){
-    mock_queue.push_back()
+  std::vector<float>glb_weight(THREAD, 1);
+  WRSLIB Tselector(glb_weight.begin(),glb_weight.end());
+  // WRSLIB selector(weights.begin(), weights.end());
+  std::vector<WRSLIB> Lselectors;
+  Lselectors.reserve(THREADS);
+  int base = WEIGHTNUM / THREADS;
+  int rem  = WEIGHTNUM % THREADS;
+
+  int offset = 0;
+  for(int i = 0; i< THREADS; ++i){
+    int chunk = base;
+    auto first = weights.begin()+ offset;
+    auto last = first+ chunk;
+    Lselectors.emplace_back(WRSLIB selector(first, last));
+    offset+=chunk;
   }
+  std::vector<std::atomic<std::size_t>>mock_queue(THREADS);
 
   // selector.PrintTreePublic();
   gettimeofday(&start, NULL);
@@ -60,9 +71,10 @@ int main() {
     threads.emplace_back([&]() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
-        int index = selector(thread_gen);
-        if(i%12==0)
-            selector.update_weight(index, std::max<float>(0.0f, d(thread_gen) - minweight));
+        int i0 = Tselector(thread_gen);
+        int i1 = Lselectors[i0](thread_gen);
+        mock_queue[i1%THREADS].fetch_add(i0);
+        Lselector[t].update_weight(i1, std::max<float>(0.0f, d(thread_gen) - minweight));
       }
     });
   }
