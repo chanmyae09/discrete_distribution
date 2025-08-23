@@ -8,13 +8,13 @@ echo "Number of tests: $1"
 echo "Weightnum: $2"
 echo "Threadnum: $3"
 
-echo "uniform_changing_sideways_fenwick, uniform_changing_sideways_fenwick_lock" > results_${2}_${3}.csv
+echo "uniform_changing_sideways_fenwick, uniform_changing_sideways_fenwick_queue" > results_${2}_${3}.csv
 
 
 
 # Uniform distribution static weight multithread tests
 g++ -std=c++20 -I../../lib -O3 -pthread "-DWRSLIB=dense::stochastic::sideways_fenwick_selector<>" "-DWEIGHTNUM=$2" "-DTHREADNUM=$3" -o test0 uniform_changing.cpp
-g++ -std=c++20 -I../../lib -O3 -pthread "-DWRSLIB=dense::stochastic::sideways_fenwick_selector_lock<>" "-DWEIGHTNUM=$2" "-DTHREADNUM=$3" -o test1 uniform_changing.cpp
+g++ -std=c++20 -I../../lib -O3 -pthread "-DWRSLIB=dense::stochastic::sideways_fenwick_selector<>" "-DWEIGHTNUM=$2" "-DTHREADNUM=$3" -o test1 uniform_changing_queue.cpp
 # Initialize sums
 sum0=0
 sum1=0

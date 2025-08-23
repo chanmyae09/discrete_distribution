@@ -52,7 +52,7 @@ int main() {
 
   int offset = 0;
   for(int i = 0; i< THREADS; ++i){
-    int chunk = base;
+    int chunk = base + (i==0 ? rem:0);
     auto first = weights.begin()+ offset;
     auto last = first+ chunk;
     Lselectors.emplace_back(std::make_unique<WRSLIB>(first, last));
@@ -60,15 +60,13 @@ int main() {
   }
   std::vector<std::atomic<std::size_t>>mock_queue(THREADS);
 
-  // selector.PrintTreePublic();
   gettimeofday(&start, NULL);
 
   std::vector<std::thread> threads;
-  std::vector<int>thread_sums(THREADS, 0);
   int iter_per_thread = TOTAL_ITERATIONS/ THREADS;
   
   for (int t = 0; t < THREADS; ++t) {
-    threads.emplace_back([&]() {
+    threads.emplace_back([&,t]() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
         int i0 = Tselector(thread_gen);
@@ -85,6 +83,5 @@ int main() {
   double elapsedtime_sec = double(end.tv_sec - start.tv_sec) + 
   double(end.tv_usec - start.tv_usec)/1000000.0;
   std::cout << elapsedtime_sec << std::endl;
-  // selector.PrintTreePublic();
 
 }
