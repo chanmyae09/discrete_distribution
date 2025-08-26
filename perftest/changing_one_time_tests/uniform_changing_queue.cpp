@@ -25,25 +25,29 @@ using namespace dense::stochastic;
 
 int main() {
   int THREADS = THREADNUM;
-  int TOTAL_ITERATIONS = 1200000;
+  int TOTAL_ITERATIONS =1200000 ;
   int weight_per_thread = WEIGHTNUM/ THREADS;
-  std::uniform_real_distribution<float> d(1,10); 
+  std::uniform_real_distribution<double>d(1,10); 
   std::default_random_engine generator;
-  std::vector<float> weights = {};
+  std::vector<double> weights = {};
   weights.reserve(WEIGHTNUM);
   for(int i = 0; i < WEIGHTNUM; i++){
     weights.push_back(d(generator));
   }	      
 
-  float minweight = *std::min_element(weights.begin(), weights.end());
+  double minweight = *std::min_element(weights.begin(), weights.end());
   for(int i = 0; i < WEIGHTNUM; i++){
     weights[i] -= minweight;
   }	      
 
   //start time
   struct timeval start, end;
-  std::vector<float>glb_weight(THREADS, 1);
-  WRSLIB Tselector(glb_weight.begin(),glb_weight.end());
+  std::vector<double>glb_weight(THREADS, 1);
+  std::unique_ptr<WRSLIB> Tselector;
+  if (THREADS > 1) {
+    Tselector = std::make_unique<WRSLIB>(glb_weight.begin(), glb_weight.end());
+}
+
   // WRSLIB selector(weights.begin(), weights.end());
   std::vector<std::unique_ptr<WRSLIB>> Lselectors;
   Lselectors.reserve(THREADS);
@@ -52,13 +56,19 @@ int main() {
 
   int offset = 0;
   for(int i = 0; i< THREADS; ++i){
-    int chunk = base + (i==0 ? rem:0);
+    int chunk = base ; //+ (i==0 ? rem:0);
     auto first = weights.begin()+ offset;
     auto last = first+ chunk;
     Lselectors.emplace_back(std::make_unique<WRSLIB>(first, last));
     offset+=chunk;
   }
-  std::vector<std::atomic<std::size_t>>mock_queue(THREADS);
+
+
+  std::vector<std::atomic<std::size_t>> mock_queue(THREADS);
+  for (auto &a : mock_queue) {
+      a.store(1, std::memory_order_relaxed);
+  }
+
 
   gettimeofday(&start, NULL);
 
@@ -69,10 +79,11 @@ int main() {
     threads.emplace_back([&,t]() {
       std::default_random_engine thread_gen(std::random_device{}());
       for (int i = 0; i < iter_per_thread; ++i) {
-        int i0 = Tselector(thread_gen);
+        int i0 = (THREADS > 1) ? (*Tselector)(thread_gen) : 0;
         int i1 = (*Lselectors[i0])(thread_gen);
         mock_queue[i1%THREADS].fetch_add(i0);
-        Lselectors[t]->update_weight(i1, std::max<float>(0.0f, d(thread_gen) - minweight));
+        int i2 = (*Lselectors[t])(thread_gen);
+        Lselectors[t]->update_weight(i2, std::max<double>(0.0f, d(thread_gen) - minweight));
       }
     });
   }

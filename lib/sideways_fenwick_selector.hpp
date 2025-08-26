@@ -118,6 +118,7 @@ namespace stochastic {
       
       template<class URNG>
       index_type operator()(URNG& g) {
+        index_type result;
         auto tw = total_weight.load(std::memory_order_seq_cst); 
         Real target =  std::generate_canonical<Real, precision, URNG>(g)*tw;
 
@@ -147,12 +148,24 @@ namespace stochastic {
           }
         }
         if (target<(this->value_of(node))){
-            return id_of(node);
+            result =  id_of(node);
           }
         else{
-          return id_of(nextNode(node));
+          result =  id_of(nextNode(node));
           
         }
+        if (result < 0 || result >= BaseTree::entry_count()) {
+        std::cerr << "BUG: returning " << result
+                  << " tw=" << tw
+                  << " target=" << target
+                  << " node=" << node
+                  << " lastNonLeaf=" << lastNonLeaf
+                  << " entry_count=" << BaseTree::entry_count()
+                  << std::endl;
+        __builtin_trap();  // stop right here in gdb
+    }
+    return result;
+
       }
 
       void update_weight(index_type i, Real new_weight) {
@@ -178,6 +191,10 @@ namespace stochastic {
       //   update_weight_of_node(BaseTree::last(),0);
       //   BaseTree::pop_back();
       // }
+      size_t entry_count() const {
+        return BaseTree::entry_count();
+    }
+
 
     private:
 
@@ -198,6 +215,10 @@ namespace stochastic {
       
       
       void update_weight_of_node(node_type givenNode, Real new_weight) {
+        if (givenNode < BaseTree::root() || givenNode >= this->_capacity) {
+          throw std::out_of_range("update_weight_of_node: invalid node index");
+        }
+
         auto node = givenNode;
         Real weightDifference =  new_weight - this->weight_of(node);
         total_weight.fetch_add(weightDifference, std::memory_order_seq_cst);

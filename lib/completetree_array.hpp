@@ -27,10 +27,11 @@ namespace stochastic {
       using storage_type = std::atomic<U>;
       using size_type = size_t;
       using position_type = P;
+      size_type _capacity;
    private:
       position_type _next;
       std::unique_ptr<storage_type[]> _tree;
-      size_type _capacity;
+      
    public:
       explicit complete_tree(position_type reserve = 0) {
          _capacity= static_cast<size_type>(reserve+1);
